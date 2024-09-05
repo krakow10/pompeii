@@ -29,9 +29,25 @@ pub struct CameraLens {
 }
 
 /// The various shader resources needed for ray tracing.
+#[repr(C)]
 struct RayTracingShaders {
     modules: [ash::vk::ShaderModule; 4],
 }
+// Access the ray tracing shaders struct using named fields
+#[repr(C)]
+struct RayTracingShadersFields {
+    ray_gen: ash::vk::ShaderModule,
+    miss: ash::vk::ShaderModule,
+    shadow_miss: ash::vk::ShaderModule,
+    closest_hit: ash::vk::ShaderModule,
+}
+impl core::ops::Deref for RayTracingShaders {
+    type Target = RayTracingShadersFields;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(&self.modules) }
+    }
+}
+
 impl RayTracingShaders {
     pub const RAY_GEN: u32 = 0;
     pub const MISS: u32 = 1;
@@ -87,20 +103,6 @@ impl RayTracingShaders {
         for module in self.modules {
             unsafe { device.destroy_shader_module(module, None) };
         }
-    }
-
-    // Getters.
-    pub fn ray_gen(&self) -> ash::vk::ShaderModule {
-        self.modules[Self::RAY_GEN as usize]
-    }
-    pub fn miss(&self) -> ash::vk::ShaderModule {
-        self.modules[Self::MISS as usize]
-    }
-    pub fn shadow_miss(&self) -> ash::vk::ShaderModule {
-        self.modules[Self::SHADOW_MISS as usize]
-    }
-    pub fn closest_hit(&self) -> ash::vk::ShaderModule {
-        self.modules[Self::CLOSEST_HIT as usize]
     }
 }
 
@@ -1388,7 +1390,7 @@ impl Pipeline {
 
         let ray_gen_shader_info = ash::vk::PipelineShaderStageCreateInfo::default()
             .stage(ash::vk::ShaderStageFlags::RAYGEN_KHR)
-            .module(shaders.ray_gen())
+            .module(shaders.ray_gen)
             .name(ENTRY_POINT_MAIN);
         let ray_gen_shader_group = ash::vk::RayTracingShaderGroupCreateInfoKHR::default()
             .ty(ash::vk::RayTracingShaderGroupTypeKHR::GENERAL)
@@ -1399,7 +1401,7 @@ impl Pipeline {
 
         let miss_shader_info = ash::vk::PipelineShaderStageCreateInfo::default()
             .stage(ash::vk::ShaderStageFlags::MISS_KHR)
-            .module(shaders.miss())
+            .module(shaders.miss)
             .name(ENTRY_POINT_MAIN);
         let miss_shader_group = ash::vk::RayTracingShaderGroupCreateInfoKHR::default()
             .ty(ash::vk::RayTracingShaderGroupTypeKHR::GENERAL)
@@ -1410,7 +1412,7 @@ impl Pipeline {
 
         let shadow_miss_shader_info = ash::vk::PipelineShaderStageCreateInfo::default()
             .stage(ash::vk::ShaderStageFlags::MISS_KHR)
-            .module(shaders.shadow_miss())
+            .module(shaders.shadow_miss)
             .name(ENTRY_POINT_MAIN);
         let shadow_miss_shader_group = ash::vk::RayTracingShaderGroupCreateInfoKHR::default()
             .ty(ash::vk::RayTracingShaderGroupTypeKHR::GENERAL)
@@ -1421,7 +1423,7 @@ impl Pipeline {
 
         let closest_hit_shader_info = ash::vk::PipelineShaderStageCreateInfo::default()
             .stage(ash::vk::ShaderStageFlags::CLOSEST_HIT_KHR)
-            .module(shaders.closest_hit())
+            .module(shaders.closest_hit)
             .name(ENTRY_POINT_MAIN);
         let closest_hit_shader_group = ash::vk::RayTracingShaderGroupCreateInfoKHR::default()
             .ty(ash::vk::RayTracingShaderGroupTypeKHR::TRIANGLES_HIT_GROUP)
